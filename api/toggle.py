@@ -23,23 +23,36 @@ class handler(BaseHTTPRequestHandler):
             if is_blocked:
                 # 2. DELETE (Unblock)
                 delete_url = f"{base_url}/{DOMAIN}"
-                del_req = urllib.request.Request(delete_url, headers=headers, method='DELETE')
-                urllib.request.urlopen(del_req)
+                del_req = urllib.request.Request(delete_url, headers=headers)
+                del_req.get_method = lambda: 'DELETE'
+                with urllib.request.urlopen(del_req) as response:
+                    pass
                 res_msg = f"UNBLOCKED: {DOMAIN}"
             else:
                 # 3. POST (Block)
                 post_data = json.dumps({"id": DOMAIN}).encode('utf-8')
-                post_req = urllib.request.Request(base_url, data=post_data, headers=headers, method='POST')
-                urllib.request.urlopen(post_req)
+                post_req = urllib.request.Request(base_url, data=post_data, headers=headers)
+                post_req.get_method = lambda: 'POST'
+                with urllib.request.urlopen(post_req) as response:
+                    pass
                 res_msg = f"BLOCKED: {DOMAIN}"
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(json.dumps({"result": res_msg}).encode())
 
         except Exception as e:
-            self.send_response(200)
+            self.send_response(500)
             self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
